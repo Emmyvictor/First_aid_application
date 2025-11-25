@@ -1,0 +1,17 @@
+Flask==3.0.0
+Flask-SQLAlchemy==3.1.1
+Flask-Mail==0.9.1
+Werkzeug==3.0.1
+
+# Environment variable loader
+python-dotenv==1.0.1
+
+# Password hashing utilities
+itsdangerous==2.2.0
+
+# Database / SQL utilities (used by SQLAlchemy)
+SQLAlchemy==2.0.23
+greenlet==3.0.1
+
+# For safe JSON encoding/decoding and serialization
+simplejson==3.19.2

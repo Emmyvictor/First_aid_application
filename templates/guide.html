@@ -1,0 +1,178 @@
+{% extends "base.html" %}
+{% block title %}{{ guide.title }} - First Aid Guide{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50 py-8">
+    <div class="container mx-auto px-4 max-w-4xl">
+
+        <!-- Back Button -->
+        <div class="mb-6">
+            <a href="{{ url_for('dashboard') }}" class="text-red-600 hover:text-red-800 transition inline-flex items-center">
+                <i class="fas fa-arrow-left mr-2"></i>Back to Dashboard
+            </a>
+        </div>
+
+        <!-- Guide Wrapper -->
+        <div class="bg-white rounded-2xl shadow-xl overflow-hidden animate-fade-in">
+
+            <!-- Header -->
+            <div class="bg-gradient-to-r from-red-600 to-red-700 text-white p-8">
+                <div class="flex items-start justify-between">
+                    <div>
+                        <div class="flex items-center mb-3">
+                            <span class="bg-red-500 px-3 py-1 rounded-full text-sm font-semibold mr-3">
+                                {{ guide.category }}
+                            </span>
+                            <span class="text-red-200 text-sm">
+                                <i class="fas fa-eye mr-1"></i>{{ guide.views }} views
+                            </span>
+                        </div>
+
+                        <h1 class="text-4xl font-bold mb-3">{{ guide.title }}</h1>
+                        <p class="text-red-100 text-lg">{{ guide.description }}</p>
+                    </div>
+
+                    <button onclick="window.print()" 
+                        class="bg-white text-red-600 px-4 py-2 rounded-lg hover:bg-red-50 transition ml-4">
+                        <i class="fas fa-print mr-2"></i>Print
+                    </button>
+                </div>
+            </div>
+
+            <!-- Emergency Alert -->
+            <div class="bg-yellow-100 border-l-4 border-yellow-500 p-4">
+                <div class="flex items-center">
+                    <i class="fas fa-exclamation-triangle text-yellow-600 text-2xl mr-3"></i>
+                    <div>
+                        <p class="font-bold text-yellow-800">Emergency Situation?</p>
+                        <p class="text-yellow-700 text-sm">Call emergency services (911) immediately for life-threatening situations</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Content -->
+            <div class="p-8">
+
+                <!-- Symptoms -->
+                {% if symptoms %}
+                <div class="mb-8">
+                    <h2 class="text-2xl font-bold text-gray-800 mb-4 flex items-center">
+                        <i class="fas fa-stethoscope text-red-600 mr-3"></i>Symptoms & Recognition
+                    </h2>
+                    <div class="bg-blue-50 border border-blue-200 rounded-lg p-6">
+                        <ul class="space-y-2">
+                            {% for s in symptoms %}
+                            <li class="flex items-start">
+                                <i class="fas fa-check-circle text-blue-600 mr-3"></i>
+                                <span class="text-gray-700">{{ s }}</span>
+                            </li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Steps -->
+                <div class="mb-8">
+                    <h2 class="text-2xl font-bold text-gray-800 mb-4 flex items-center">
+                        <i class="fas fa-list-ol text-red-600 mr-3"></i>Step-by-Step Instructions
+                    </h2>
+
+                    <div class="space-y-4">
+                        {% for step in steps %}
+                        <div class="flex items-start bg-gray-50 rounded-lg p-5 hover:bg-gray-100 transition">
+                            <div class="w-10 h-10 bg-red-600 text-white rounded-full flex items-center justify-center font-bold text-lg mr-4">
+                                {{ loop.index }}
+                            </div>
+                            <p class="text-gray-800 text-lg">{{ step }}</p>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- Warnings -->
+                {% if warnings %}
+                <div class="mb-8">
+                    <h2 class="text-2xl font-bold text-gray-800 mb-4 flex items-center">
+                        <i class="fas fa-exclamation-circle text-red-600 mr-3"></i>Important Warnings
+                    </h2>
+                    <div class="bg-red-50 border-l-4 border-red-500 p-6 rounded-r-lg">
+                        <ul class="space-y-3">
+                            {% for w in warnings %}
+                            <li class="flex items-start">
+                                <i class="fas fa-times-circle text-red-600 mr-3"></i>
+                                <span class="text-red-800 font-medium">{{ w }}</span>
+                            </li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Tips -->
+                {% if tips %}
+                <div class="mb-8">
+                    <h2 class="text-2xl font-bold text-gray-800 mb-4 flex items-center">
+                        <i class="fas fa-lightbulb text-red-600 mr-3"></i>Helpful Tips
+                    </h2>
+                    <div class="bg-green-50 border border-green-200 rounded-lg p-6">
+                        <ul class="space-y-2">
+                            {% for t in tips %}
+                            <li class="flex items-start">
+                                <i class="fas fa-check text-green-600 mr-3"></i>
+                                <span class="text-gray-700">{{ t }}</span>
+                            </li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Medical Help -->
+                <div class="mb-8">
+                    <h2 class="text-2xl font-bold text-gray-800 mb-4 flex items-center">
+                        <i class="fas fa-hospital text-red-600 mr-3"></i>When to Seek Medical Help
+                    </h2>
+
+                    <div class="bg-purple-50 border border-purple-200 rounded-lg p-6">
+                        <p class="text-gray-700 mb-3">Seek immediate medical attention if:</p>
+                        <ul class="space-y-2">
+                            <li class="flex items-start"><i class="fas fa-chevron-right text-purple-600 mr-3"></i>Symptoms worsen</li>
+                            <li class="flex items-start"><i class="fas fa-chevron-right text-purple-600 mr-3"></i>The person loses consciousness</li>
+                            <li class="flex items-start"><i class="fas fa-chevron-right text-purple-600 mr-3"></i>You are unsure</li>
+                            <li class="flex items-start"><i class="fas fa-chevron-right text-purple-600 mr-3"></i>Multiple symptoms appear</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Disclaimer -->
+                <div class="bg-gray-100 border border-gray-300 rounded-lg p-6">
+                    <p class="text-sm text-gray-600 text-center">
+                        <i class="fas fa-info-circle mr-2"></i>
+                        <strong>Medical Disclaimer:</strong> This information is for educational purposes only.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="bg-gray-50 px-8 py-6 border-t border-gray-200 flex flex-col sm:flex-row justify-between">
+                <div class="text-gray-600 text-sm">
+                    <i class="fas fa-clock mr-2"></i>Last updated: {{ guide.updated_at or "Recently" }}
+                </div>
+
+                <div class="flex gap-3 mt-4 sm:mt-0">
+                    <button onclick="window.print()" class="bg-gray-200 px-6 py-2 rounded-lg hover:bg-gray-300">
+                        <i class="fas fa-print mr-2"></i>Print Guide
+                    </button>
+
+                    <a href="{{ url_for('dashboard') }}" class="bg-red-600 text-white px-6 py-2 rounded-lg hover:bg-red-700">
+                        <i class="fas fa-arrow-left mr-2"></i>Back
+                    </a>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+{% endblock %}

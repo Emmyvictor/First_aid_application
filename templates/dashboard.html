@@ -1,0 +1,123 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    
+    <!-- Header -->
+    <div class="mb-8 animate-fade-in-up">
+        <h1 class="text-4xl font-bold text-gray-800 mb-2">
+            <i class="fas fa-medkit text-red-600"></i>
+            Emergency First Aid Guides
+        </h1>
+        <p class="text-gray-600">Search and learn life-saving procedures</p>
+    </div>
+
+    <!-- Search & Filter -->
+    <div class="bg-white rounded-xl shadow-lg p-6 mb-8 animate-fade-in-up">
+        <div class="flex flex-col md:flex-row gap-4">
+            
+            <!-- Search -->
+            <div class="flex-1">
+                <div class="relative">
+                    <i class="fas fa-search absolute left-4 top-4 text-gray-400"></i>
+                    <input type="text" id="searchInput" 
+                        placeholder="Search emergencies... (e.g., seizure, choking, burns)"
+                        class="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-red-500 transition">
+                </div>
+            </div>
+
+            <!-- Category Filter -->
+            <select id="categoryFilter"
+                class="px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-red-500 transition">
+                <option value="">All Categories</option>
+                {% for category in categories %}
+                <option value="{{ category[0] }}">{{ category[0] }}</option>
+                {% endfor %}
+            </select>
+        </div>
+    </div>
+
+    <!-- Guides Grid -->
+    <div id="guidesGrid" class="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
+        {% for guide in guides %}
+        <div class="bg-white rounded-xl shadow-lg overflow-hidden card-hover guide-card"
+            data-title="{{ guide.title|lower }}"
+            data-category="{{ guide.category }}"
+            data-description="{{ guide.description|lower }}">
+
+            <!-- Card Header -->
+            <div class="gradient-bg text-white p-6">
+                <div class="flex justify-between items-start mb-2">
+                    <h3 class="text-2xl font-bold">{{ guide.title }}</h3>
+                    <span class="bg-white/20 px-3 py-1 rounded-full text-sm">
+                        {{ guide.category }}
+                    </span>
+                </div>
+                <p class="text-red-100 text-sm">
+                    <i class="fas fa-eye mr-1"></i>{{ guide.views }} views
+                </p>
+            </div>
+
+            <!-- Description -->
+            <div class="p-6">
+                <p class="text-gray-600 mb-4 line-clamp-3">{{ guide.description }}</p>
+                <a href="{{ url_for('view_guide', guide_id=guide.id) }}"
+                    class="inline-block bg-red-600 text-white px-6 py-2 rounded-lg hover:bg-red-700 transition">
+                    <i class="fas fa-book-medical mr-2"></i>View Guide
+                </a>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Recent Activity -->
+    <div class="bg-white rounded-xl shadow-lg p-6 animate-slide-in-right">
+        <h2 class="text-2xl font-bold text-gray-800 mb-4">
+            <i class="fas fa-history text-red-600 mr-2"></i>Your Recent Activity
+        </h2>
+
+        <div class="space-y-3">
+            {% for activity in recent_activities %}
+            <div class="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                <i class="fas fa-circle text-red-600 text-xs"></i>
+                <div class="flex-1">
+                    <p class="font-semibold text-gray-800">{{ activity.action }}</p>
+                    <p class="text-sm text-gray-600">{{ activity.timestamp.strftime('%B %d, %Y at %I:%M %p') }}</p>
+                </div>
+            </div>
+            {% else %}
+            <p class="text-gray-500 text-center py-4">No recent activity</p>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<script>
+const searchInput = document.getElementById('searchInput');
+const categoryFilter = document.getElementById('categoryFilter');
+const guideCards = document.querySelectorAll('.guide-card');
+
+function filterGuides() {
+    const searchTerm = searchInput.value.toLowerCase();
+    const selectedCategory = categoryFilter.value;
+
+    guideCards.forEach(card => {
+        const title = card.dataset.title;
+        const category = card.dataset.category;
+        const description = card.dataset.description;
+
+        const matchesSearch = title.includes(searchTerm) || description.includes(searchTerm);
+        const matchesCategory = !selectedCategory || category === selectedCategory;
+
+        if (matchesSearch && matchesCategory) {
+            card.style.display = 'block';
+        } else {
+            card.style.display = 'none';
+        }
+    });
+}
+
+searchInput.addEventListener('input', filterGuides);
+categoryFilter.addEventListener('change', filterGuides);
+</script>
+{% endblock %}

@@ -1,0 +1,172 @@
+{% extends "base.html" %}
+
+{% block title %}First Aid Guide - Emergency Medical Information{% endblock %}
+
+{% block content %}
+<!-- Hero Section -->
+<div class="bg-gradient-to-br from-red-600 to-red-800 text-white">
+    <div class="container mx-auto px-4 py-20">
+        <div class="max-w-4xl mx-auto text-center animate-fade-in">
+            <i class="fas fa-heartbeat text-6xl mb-6"></i>
+            <h1 class="text-5xl md:text-6xl font-bold mb-6">First Aid Guide</h1>
+            <p class="text-xl md:text-2xl mb-8 text-red-100">
+                Quick access to life-saving emergency information when you need it most
+            </p>
+            <div class="flex flex-col sm:flex-row gap-4 justify-center">
+                <a href="{{ url_for('signup') }}" class="bg-white text-red-600 px-8 py-4 rounded-lg font-semibold text-lg hover:bg-red-50 transition transform hover:scale-105 shadow-lg">
+                    <i class="fas fa-user-plus mr-2"></i>Get Started Free
+                </a>
+                <a href="{{ url_for('login') }}" class="bg-red-700 text-white px-8 py-4 rounded-lg font-semibold text-lg hover:bg-red-800 transition transform hover:scale-105 shadow-lg">
+                    <i class="fas fa-sign-in-alt mr-2"></i>Sign In
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Features Section -->
+<div class="py-20 bg-gray-50">
+    <div class="container mx-auto px-4">
+        <div class="text-center mb-16">
+            <h2 class="text-4xl font-bold text-gray-800 mb-4">Why Choose Our First Aid Guide?</h2>
+            <p class="text-xl text-gray-600">Professional, reliable, and easy-to-follow emergency instructions</p>
+        </div>
+        
+        <div class="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
+            <!-- Feature 1 -->
+            <div class="bg-white p-8 rounded-xl shadow-lg hover:shadow-2xl transition transform hover:-translate-y-2">
+                <div class="text-red-600 text-5xl mb-4">
+                    <i class="fas fa-search"></i>
+                </div>
+                <h3 class="text-2xl font-bold text-gray-800 mb-3">Quick Search</h3>
+                <p class="text-gray-600">
+                    Find the emergency information you need instantly with our powerful search and category filters.
+                </p>
+            </div>
+
+            <!-- Feature 2 -->
+            <div class="bg-white p-8 rounded-xl shadow-lg hover:shadow-2xl transition transform hover:-translate-y-2">
+                <div class="text-red-600 text-5xl mb-4">
+                    <i class="fas fa-book-medical"></i>
+                </div>
+                <h3 class="text-2xl font-bold text-gray-800 mb-3">Comprehensive Guides</h3>
+                <p class="text-gray-600">
+                    Step-by-step instructions for handling common medical emergencies with professional accuracy.
+                </p>
+            </div>
+
+            <!-- Feature 3 -->
+            <div class="bg-white p-8 rounded-xl shadow-lg hover:shadow-2xl transition transform hover:-translate-y-2">
+                <div class="text-red-600 text-5xl mb-4">
+                    <i class="fas fa-mobile-alt"></i>
+                </div>
+                <h3 class="text-2xl font-bold text-gray-800 mb-3">Mobile Friendly</h3>
+                <p class="text-gray-600">
+                    Access critical first aid information on any device - desktop, tablet, or smartphone.
+                </p>
+            </div>
+
+            <!-- Feature 4 -->
+            <div class="bg-white p-8 rounded-xl shadow-lg hover:shadow-2xl transition transform hover:-translate-y-2">
+                <div class="text-red-600 text-5xl mb-4">
+                    <i class="fas fa-shield-alt"></i>
+                </div>
+                <h3 class="text-2xl font-bold text-gray-800 mb-3">Secure & Private</h3>
+                <p class="text-gray-600">
+                    Your account and activity data are protected with industry-standard security measures.
+                </p>
+            </div>
+
+            <!-- Feature 5 -->
+            <div class="bg-white p-8 rounded-xl shadow-lg hover:shadow-2xl transition transform hover:-translate-y-2">
+                <div class="text-red-600 text-5xl mb-4">
+                    <i class="fas fa-print"></i>
+                </div>
+                <h3 class="text-2xl font-bold text-gray-800 mb-3">Print Ready</h3>
+                <p class="text-gray-600">
+                    Print guides for offline reference and emergency preparedness kits with one click.
+                </p>
+            </div>
+
+            <!-- Feature 6 -->
+            <div class="bg-white p-8 rounded-xl shadow-lg hover:shadow-2xl transition transform hover:-translate-y-2">
+                <div class="text-red-600 text-5xl mb-4">
+                    <i class="fas fa-clock"></i>
+                </div>
+                <h3 class="text-2xl font-bold text-gray-800 mb-3">24/7 Access</h3>
+                <p class="text-gray-600">
+                    Emergency information available anytime, anywhere. Always be prepared when seconds count.
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Emergency Categories Section -->
+<div class="py-20 bg-white">
+    <div class="container mx-auto px-4">
+        <div class="text-center mb-16">
+            <h2 class="text-4xl font-bold text-gray-800 mb-4">Emergency Categories Covered</h2>
+            <p class="text-xl text-gray-600">Comprehensive first aid guides for various medical emergencies</p>
+        </div>
+        
+        <div class="grid md:grid-cols-4 gap-6 max-w-6xl mx-auto">
+            <div class="bg-red-50 p-6 rounded-lg text-center hover:bg-red-100 transition">
+                <i class="fas fa-heart text-4xl text-red-600 mb-3"></i>
+                <h4 class="font-bold text-gray-800">Cardiac</h4>
+            </div>
+            <div class="bg-red-50 p-6 rounded-lg text-center hover:bg-red-100 transition">
+                <i class="fas fa-brain text-4xl text-red-600 mb-3"></i>
+                <h4 class="font-bold text-gray-800">Neurological</h4>
+            </div>
+            <div class="bg-red-50 p-6 rounded-lg text-center hover:bg-red-100 transition">
+                <i class="fas fa-lungs text-4xl text-red-600 mb-3"></i>
+                <h4 class="font-bold text-gray-800">Respiratory</h4>
+            </div>
+            <div class="bg-red-50 p-6 rounded-lg text-center hover:bg-red-100 transition">
+                <i class="fas fa-fire text-4xl text-red-600 mb-3"></i>
+                <h4 class="font-bold text-gray-800">Trauma</h4>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- CTA Section -->
+<div class="bg-gradient-to-br from-red-600 to-red-800 text-white py-20">
+    <div class="container mx-auto px-4 text-center">
+        <h2 class="text-4xl font-bold mb-6">Ready to Get Started?</h2>
+        <p class="text-xl mb-8 text-red-100">Join thousands of users who trust our first aid guides</p>
+        <a href="{{ url_for('signup') }}" class="bg-white text-red-600 px-10 py-4 rounded-lg font-semibold text-lg hover:bg-red-50 transition transform hover:scale-105 shadow-lg inline-block">
+            <i class="fas fa-user-plus mr-2"></i>Create Free Account
+        </a>
+    </div>
+</div>
+
+<!-- Footer -->
+<footer class="bg-gray-800 text-white py-8">
+    <div class="container mx-auto px-4 text-center">
+        <p class="mb-4">
+            <i class="fas fa-exclamation-triangle text-yellow-400 mr-2"></i>
+            <strong>Disclaimer:</strong> This information is for educational purposes only. Always call emergency services (911) for serious medical emergencies.
+        </p>
+        <p class="text-gray-400">&copy; 2024 First Aid Guide. All rights reserved.</p>
+    </div>
+</footer>
+
+<style>
+@keyframes fade-in {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.animate-fade-in {
+    animation: fade-in 1s ease-out;
+}
+</style>
+{% endblock %}

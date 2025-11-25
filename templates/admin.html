@@ -1,0 +1,264 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Dashboard - First Aid Guide{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50 py-8">
+    <div class="container mx-auto px-4">
+        <!-- Header -->
+        <div class="mb-8 animate-fade-in">
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div>
+                    <h1 class="text-4xl font-bold text-gray-800 mb-2">
+                        <i class="fas fa-user-shield text-red-600 mr-3"></i>Admin Dashboard
+                    </h1>
+                    <p class="text-gray-600">Monitor users, activities, and system statistics</p>
+                </div>
+                <div class="flex gap-3">
+                    <a href="{{ url_for('dashboard') }}" class="bg-gray-200 text-gray-700 px-6 py-3 rounded-lg hover:bg-gray-300 transition">
+                        <i class="fas fa-arrow-left mr-2"></i>User View
+                    </a>
+                    <a href="{{ url_for('logout') }}" class="bg-red-600 text-white px-6 py-3 rounded-lg hover:bg-red-700 transition">
+                        <i class="fas fa-sign-out-alt mr-2"></i>Logout
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Statistics Cards -->
+        <div class="grid md:grid-cols-4 gap-6 mb-8">
+            <!-- Total Users -->
+            <div class="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition transform hover:-translate-y-1 animate-slide-up">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="bg-blue-100 p-3 rounded-lg">
+                        <i class="fas fa-users text-3xl text-blue-600"></i>
+                    </div>
+                    <span class="text-xs text-gray-500 uppercase">Total Users</span>
+                </div>
+                <h3 class="text-3xl font-bold text-gray-800">{{ stats.total_users }}</h3>
+                <p class="text-sm text-gray-600 mt-2">Registered accounts</p>
+            </div>
+
+            <!-- Verified Users -->
+            <div class="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition transform hover:-translate-y-1 animate-slide-up" style="animation-delay: 0.1s">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="bg-green-100 p-3 rounded-lg">
+                        <i class="fas fa-user-check text-3xl text-green-600"></i>
+                    </div>
+                    <span class="text-xs text-gray-500 uppercase">Verified</span>
+                </div>
+                <h3 class="text-3xl font-bold text-gray-800">{{ stats.verified_users }}</h3>
+                <p class="text-sm text-gray-600 mt-2">Email confirmed</p>
+            </div>
+
+            <!-- Total Activities -->
+            <div class="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition transform hover:-translate-y-1 animate-slide-up" style="animation-delay: 0.2s">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="bg-purple-100 p-3 rounded-lg">
+                        <i class="fas fa-chart-line text-3xl text-purple-600"></i>
+                    </div>
+                    <span class="text-xs text-gray-500 uppercase">Activities</span>
+                </div>
+                <h3 class="text-3xl font-bold text-gray-800">{{ stats.total_activities }}</h3>
+                <p class="text-sm text-gray-600 mt-2">User actions logged</p>
+            </div>
+
+            <!-- Guide Views -->
+            <div class="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition transform hover:-translate-y-1 animate-slide-up" style="animation-delay: 0.3s">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="bg-red-100 p-3 rounded-lg">
+                        <i class="fas fa-eye text-3xl text-red-600"></i>
+                    </div>
+                    <span class="text-xs text-gray-500 uppercase">Total Views</span>
+                </div>
+                <h3 class="text-3xl font-bold text-gray-800">{{ stats.total_views or 0 }}</h3>
+                <p class="text-sm text-gray-600 mt-2">Guide impressions</p>
+            </div>
+        </div>
+
+        <!-- Two Column Layout -->
+        <div class="grid lg:grid-cols-2 gap-8">
+            <!-- Users Table -->
+            <div class="bg-white rounded-xl shadow-lg overflow-hidden animate-fade-in">
+                <div class="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-6">
+                    <h2 class="text-2xl font-bold flex items-center">
+                        <i class="fas fa-users mr-3"></i>Registered Users
+                    </h2>
+                </div>
+                <div class="p-6">
+                    {% if users %}
+                    <div class="overflow-x-auto">
+                        <table class="w-full">
+                            <thead>
+                                <tr class="border-b-2 border-gray-200">
+                                    <th class="text-left py-3 px-2 text-sm font-semibold text-gray-700">Username</th>
+                                    <th class="text-left py-3 px-2 text-sm font-semibold text-gray-700">Email</th>
+                                    <th class="text-center py-3 px-2 text-sm font-semibold text-gray-700">Status</th>
+                                    <th class="text-left py-3 px-2 text-sm font-semibold text-gray-700">Joined</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for user in users %}
+                                <tr class="border-b border-gray-100 hover:bg-gray-50 transition">
+                                    <td class="py-3 px-2">
+                                        <div class="flex items-center">
+                                            <div class="w-8 h-8 bg-gradient-to-br from-blue-400 to-blue-600 rounded-full flex items-center justify-center text-white font-bold text-sm mr-3">
+                                                {{ user.username[0].upper() }}
+                                            </div>
+                                            <span class="font-medium text-gray-800">{{ user.username }}</span>
+                                        </div>
+                                    </td>
+                                    <td class="py-3 px-2 text-sm text-gray-600">{{ user.email }}</td>
+                                    <td class="py-3 px-2 text-center">
+                                        {% if user.is_verified %}
+                                        <span class="bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-semibold">
+                                            <i class="fas fa-check-circle mr-1"></i>Verified
+                                        </span>
+                                        {% else %}
+                                        <span class="bg-yellow-100 text-yellow-700 px-3 py-1 rounded-full text-xs font-semibold">
+                                            <i class="fas fa-clock mr-1"></i>Pending
+                                        </span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="py-3 px-2 text-sm text-gray-600">
+                                        {{ user.created_at.strftime('%b %d, %Y') if user.created_at else 'N/A' }}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-12 text-gray-500">
+                        <i class="fas fa-users text-5xl mb-4 text-gray-300"></i>
+                        <p>No users registered yet</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Recent Activities -->
+            <div class="bg-white rounded-xl shadow-lg overflow-hidden animate-fade-in">
+                <div class="bg-gradient-to-r from-purple-600 to-purple-700 text-white p-6">
+                    <h2 class="text-2xl font-bold flex items-center">
+                        <i class="fas fa-history mr-3"></i>Recent Activities
+                    </h2>
+                </div>
+                <div class="p-6">
+                    {% if activities %}
+                    <div class="space-y-4 max-h-96 overflow-y-auto">
+                        {% for activity in activities %}
+                        <div class="flex items-start bg-gray-50 rounded-lg p-4 hover:bg-gray-100 transition">
+                            <div class="flex-shrink-0 mr-4">
+                                {% if activity.action == 'login' %}
+                                <div class="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+                                    <i class="fas fa-sign-in-alt text-green-600"></i>
+                                </div>
+                                {% elif activity.action == 'logout' %}
+                                <div class="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
+                                    <i class="fas fa-sign-out-alt text-red-600"></i>
+                                </div>
+                                {% elif activity.action == 'signup' %}
+                                <div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                                    <i class="fas fa-user-plus text-blue-600"></i>
+                                </div>
+                                {% elif activity.action == 'view_guide' %}
+                                <div class="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center">
+                                    <i class="fas fa-book-medical text-purple-600"></i>
+                                </div>
+                                {% else %}
+                                <div class="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
+                                    <i class="fas fa-circle text-gray-600"></i>
+                                </div>
+                                {% endif %}
+                            </div>
+                            <div class="flex-1">
+                                <p class="text-sm font-medium text-gray-800">
+                                    <span class="font-bold">{{ activity.username }}</span> 
+                                    {% if activity.action == 'login' %}logged in
+                                    {% elif activity.action == 'logout' %}logged out
+                                    {% elif activity.action == 'signup' %}created an account
+                                    {% elif activity.action == 'view_guide' %}viewed a guide
+                                    {% else %}{{ activity.action }}
+                                    {% endif %}
+                                </p>
+                                {% if activity.details %}
+                                <p class="text-xs text-gray-600 mt-1">{{ activity.details }}</p>
+                                {% endif %}
+                                <p class="text-xs text-gray-500 mt-1">
+                                    <i class="fas fa-clock mr-1"></i>
+                                    {{ activity.timestamp.strftime('%b %d, %Y at %I:%M %p') if activity.timestamp else 'Just now' }}
+                                </p>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="text-center py-12 text-gray-500">
+                        <i class="fas fa-history text-5xl mb-4 text-gray-300"></i>
+                        <p>No activities recorded yet</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- System Info -->
+        <div class="mt-8 bg-white rounded-xl shadow-lg p-6 animate-fade-in">
+            <h2 class="text-2xl font-bold text-gray-800 mb-4 flex items-center">
+                <i class="fas fa-info-circle text-red-600 mr-3"></i>System Information
+            </h2>
+            <div class="grid md:grid-cols-3 gap-6">
+                <div class="bg-gray-50 rounded-lg p-4">
+                    <p class="text-sm text-gray-600 mb-1">Database Status</p>
+                    <p class="text-lg font-bold text-green-600">
+                        <i class="fas fa-check-circle mr-2"></i>Online
+                    </p>
+                </div>
+                <div class="bg-gray-50 rounded-lg p-4">
+                    <p class="text-sm text-gray-600 mb-1">Total Guides</p>
+                    <p class="text-lg font-bold text-gray-800">8 Emergency Guides</p>
+                </div>
+                <div class="bg-gray-50 rounded-lg p-4">
+                    <p class="text-sm text-gray-600 mb-1">Admin Role</p>
+                    <p class="text-lg font-bold text-blue-600">
+                        <i class="fas fa-shield-alt mr-2"></i>Active
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+@keyframes fade-in {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes slide-up {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.animate-fade-in {
+    animation: fade-in 0.6s ease-out;
+}
+
+.animate-slide-up {
+    animation: slide-up 0.6s ease-out;
+}
+</style>
+{% endblock %}

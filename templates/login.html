@@ -1,0 +1,173 @@
+{% extends "base.html" %}
+
+{% block title %}Sign In - First Aid Guide{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gradient-to-br from-red-50 to-red-100 py-12 px-4">
+    <div class="max-w-md mx-auto">
+        <!-- Back Button -->
+        <div class="mb-6">
+            <a href="{{ url_for('index') }}" class="text-red-600 hover:text-red-800 transition">
+                <i class="fas fa-arrow-left mr-2"></i>Back to Home
+            </a>
+        </div>
+
+        <!-- Login Card -->
+        <div class="bg-white rounded-2xl shadow-2xl p-8 animate-slide-up">
+            <!-- Header -->
+            <div class="text-center mb-8">
+                <div class="inline-block bg-red-100 p-4 rounded-full mb-4">
+                    <i class="fas fa-sign-in-alt text-4xl text-red-600"></i>
+                </div>
+                <h2 class="text-3xl font-bold text-gray-800 mb-2">Welcome Back</h2>
+                <p class="text-gray-600">Sign in to access your first aid guides</p>
+            </div>
+
+            <!-- Flash Messages -->
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="mb-4 p-4 rounded-lg {% if category == 'error' %}bg-red-100 text-red-700 border border-red-300{% else %}bg-green-100 text-green-700 border border-green-300{% endif %}">
+                            <i class="fas {% if category == 'error' %}fa-exclamation-circle{% else %}fa-check-circle{% endif %} mr-2"></i>
+                            {{ message }}
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+
+            <!-- Login Form -->
+            <form method="POST" action="{{ url_for('login') }}" class="space-y-6">
+                <!-- Email Field -->
+                <div>
+                    <label for="email" class="block text-sm font-semibold text-gray-700 mb-2">
+                        <i class="fas fa-envelope mr-2 text-red-600"></i>Email Address
+                    </label>
+                    <input 
+                        type="email" 
+                        id="email" 
+                        name="email" 
+                        required 
+                        class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent transition"
+                        placeholder="your.email@example.com"
+                        autofocus
+                    >
+                </div>
+
+                <!-- Password Field -->
+                <div>
+                    <label for="password" class="block text-sm font-semibold text-gray-700 mb-2">
+                        <i class="fas fa-lock mr-2 text-red-600"></i>Password
+                    </label>
+                    <div class="relative">
+                        <input 
+                            type="password" 
+                            id="password" 
+                            name="password" 
+                            required 
+                            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent transition"
+                            placeholder="Enter your password"
+                        >
+                        <button 
+                            type="button" 
+                            onclick="togglePassword()" 
+                            class="absolute right-3 top-3 text-gray-500 hover:text-gray-700"
+                        >
+                            <i class="fas fa-eye" id="toggleIcon"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Remember Me -->
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center">
+                        <input 
+                            type="checkbox" 
+                            id="remember" 
+                            name="remember" 
+                            class="h-4 w-4 text-red-600 border-gray-300 rounded focus:ring-red-500"
+                        >
+                        <label for="remember" class="ml-2 text-sm text-gray-600">
+                            Remember me
+                        </label>
+                    </div>
+                    <a href="#" class="text-sm text-red-600 hover:text-red-800 transition">
+                        Forgot password?
+                    </a>
+                </div>
+
+                <!-- Submit Button -->
+                <button 
+                    type="submit" 
+                    class="w-full bg-red-600 text-white py-3 rounded-lg font-semibold hover:bg-red-700 transition transform hover:scale-105 shadow-lg"
+                >
+                    <i class="fas fa-sign-in-alt mr-2"></i>Sign In
+                </button>
+            </form>
+
+            <!-- Divider -->
+            <div class="my-6 flex items-center">
+                <div class="flex-1 border-t border-gray-300"></div>
+                <span class="px-4 text-sm text-gray-500">Don't have an account?</span>
+                <div class="flex-1 border-t border-gray-300"></div>
+            </div>
+
+            <!-- Signup Link -->
+            <div class="text-center">
+                <a href="{{ url_for('signup') }}" class="text-red-600 hover:text-red-800 font-semibold transition">
+                    <i class="fas fa-user-plus mr-2"></i>Create New Account
+                </a>
+            </div>
+        </div>
+
+        <!-- Security Info -->
+        <div class="mt-6 bg-green-50 border border-green-200 rounded-lg p-4 text-center">
+            <i class="fas fa-shield-alt text-green-600 mr-2"></i>
+            <span class="text-sm text-green-800">
+                <strong>Secure Login:</strong> Your connection is protected with industry-standard encryption
+            </span>
+        </div>
+
+        <!-- Emergency Access -->
+        <div class="mt-4 bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-center">
+            <i class="fas fa-exclamation-triangle text-yellow-600 mr-2"></i>
+            <span class="text-sm text-yellow-800">
+                <strong>In case of emergency:</strong> Always call 911 first, then access first aid information
+            </span>
+        </div>
+    </div>
+</div>
+
+<style>
+@keyframes slide-up {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.animate-slide-up {
+    animation: slide-up 0.6s ease-out;
+}
+</style>
+
+<script>
+function togglePassword() {
+    const passwordField = document.getElementById('password');
+    const toggleIcon = document.getElementById('toggleIcon');
+    
+    if (passwordField.type === 'password') {
+        passwordField.type = 'text';
+        toggleIcon.classList.remove('fa-eye');
+        toggleIcon.classList.add('fa-eye-slash');
+    } else {
+        passwordField.type = 'password';
+        toggleIcon.classList.remove('fa-eye-slash');
+        toggleIcon.classList.add('fa-eye');
+    }
+}
+</script>
+{% endblock %}
