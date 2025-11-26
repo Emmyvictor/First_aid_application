@@ -1,6 +1,5 @@
 Flask==3.0.0
 Flask-SQLAlchemy==3.1.1
-Flask-Mail==0.9.1
 Werkzeug==3.0.1
 python-dotenv==1.0.1
 itsdangerous==2.2.0
@@ -8,3 +7,4 @@ SQLAlchemy==2.0.23
 greenlet==3.0.3
 simplejson==3.19.2
 gunicorn==21.2.0
+resend==0.8.0
