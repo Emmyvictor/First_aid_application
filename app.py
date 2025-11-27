@@ -1,3 +1,11 @@
+# app.py — PostgreSQL + SMTP version (full file)
+import os
+import secrets
+import json
+from datetime import datetime
+from functools import wraps
+
+from dotenv import load_dotenv
 from flask import (
     Flask,
     render_template,
@@ -9,47 +17,63 @@ from flask import (
     jsonify,
 )
 from flask_sqlalchemy import SQLAlchemy
+from flask_mail import Mail, Message
 from werkzeug.security import generate_password_hash, check_password_hash
-from datetime import datetime
-from functools import wraps
-import secrets
-import json
-import os
 from sqlalchemy import TypeDecorator, Text
-from dotenv import load_dotenv
-import resend  # ADDED: Resend replaces SMTP
 
 load_dotenv()
 
-
 app = Flask(__name__)
-app.config["SECRET_KEY"] = secrets.token_hex(16)
-app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///firstaid.db"
+
+# ---------------------------
+# Config (env-driven; safe fallbacks)
+# ---------------------------
+# Secret key (use env SECRET_KEY in production)
+app.config["SECRET_KEY"] = os.getenv("SECRET_KEY", secrets.token_hex(32))
+
+# Database URL - prefer env but fallback to the provided URL
+_default_db = "postgresql://firstaid_db_user:AqNu3UJbVd8OjLAyOLAaNGLrhcqujlRl@dpg-d4jfiv95pdvs739dp60g-a/firstaid_db"
+database_url = os.getenv("DATABASE_URL", _default_db) or _default_db
+
+# Some platforms still return `postgres://` — SQLAlchemy expects `postgresql://`
+if database_url.startswith("postgres://"):
+    database_url = database_url.replace("postgres://", "postgresql://", 1)
+
+app.config["SQLALCHEMY_DATABASE_URI"] = database_url
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
-# Overwrite with .env values
-app.config["SECRET_KEY"] = os.getenv("SECRET_KEY")
-app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv("DATABASE_URL")
 
-# ---------------------------
-# REMOVE SMTP (Flask-Mail)
-# ---------------------------
-# No SMTP configuration needed
-# mail = Mail(app)
-
-# ---------------------------
-# RESEND SETUP
-# ---------------------------
-resend.api_key = os.getenv("RESEND_API_KEY")
+# Mail settings (read from env; keep sensible fallbacks)
+def _env_bool(name, default=False):
+    v = os.getenv(name)
+    if v is None:
+        return default
+    return str(v).strip().lower() in ("1", "true", "yes", "y")
 
 
+app.config["MAIL_SERVER"] = os.getenv("MAIL_SERVER", "smtp.gmail.com")
+app.config["MAIL_PORT"] = int(os.getenv("MAIL_PORT", 587))
+app.config["MAIL_USE_TLS"] = _env_bool("MAIL_USE_TLS", True)
+app.config["MAIL_USE_SSL"] = _env_bool("MAIL_USE_SSL", False)
+app.config["MAIL_USERNAME"] = os.getenv("MAIL_USERNAME")
+app.config["MAIL_PASSWORD"] = os.getenv("MAIL_PASSWORD")
+app.config["MAIL_DEFAULT_SENDER"] = os.getenv(
+    "MAIL_DEFAULT_SENDER", app.config["MAIL_USERNAME"]
+)
+
+# ---------------------------
+# Extensions
+# ---------------------------
 db = SQLAlchemy(app)
+mail = Mail(app)
 
 
 # ---------------------------
 # Custom JSON column type
 # ---------------------------
 class JSONEncodedList(TypeDecorator):
+    """Represents an immutable structure as a json-encoded string in the DB."""
+
     impl = Text
 
     def process_bind_param(self, value, dialect):
@@ -144,10 +168,11 @@ def safe_load_list(json_text):
         return [str(json_text)]
 
 
-# ---------------------------
-# EMAIL (RESEND VERSION)
-# ---------------------------
 def send_verification_email(user):
+    """
+    Uses Flask-Mail (SMTP) to send verification email.
+    Make sure MAIL_* env variables are set on Render.
+    """
     try:
         token = secrets.token_urlsafe(32)
         user.verification_token = token
@@ -155,26 +180,21 @@ def send_verification_email(user):
 
         verification_url = url_for("verify_email", token=token, _external=True)
 
-        resend.Emails.send(
-            {
-                "from": "First Aid App <onboarding@resend.dev>",
-                "to": user.email,
-                "subject": "Verify Your Email",
-                "html": f"""
-                <p>Hello {user.username},</p>
-                <p>Please verify your email by clicking below:</p>
-                <a href="{verification_url}"
-                   style="padding:10px 20px; background:#d32f2f; color:white; border-radius:6px; text-decoration:none;">
-                   Verify Email
-                </a>
-                <p>If the button doesn’t work, copy this link:</p>
-                <p>{verification_url}</p>
-            """,
-            }
+        msg = Message(
+            "Welcome to First Aid Hub - Verify Your Email",
+            recipients=[user.email],
         )
+        msg.html = f"""
+        <p>Hello {user.username},</p>
+        <p>Please verify your account by clicking the link below:</p>
+        <p><a href="{verification_url}">{verification_url}</a></p>
+        <p>If you didn't sign up, ignore this email.</p>
+        """
+        mail.send(msg)
         return True
     except Exception as e:
-        print("✗ Resend Email error:", e)
+        # Log the error to console (Render logs)
+        print("✗ Email error:", e)
         return False
 
 
@@ -380,7 +400,7 @@ def search():
                 "id": g.id,
                 "title": g.title,
                 "category": g.category,
-                "description": g.description[:200] + "...",
+                "description": (g.description[:200] + "..."),
             }
             for g in results
         ]
@@ -399,13 +419,11 @@ def admin_dashboard():
     recent_activities = (
         Activity.query.order_by(Activity.timestamp.desc()).limit(20).all()
     )
-
     for a in recent_activities:
         user = User.query.get(a.user_id)
         a.username = user.username if user else "Unknown"
 
     users = User.query.order_by(User.created_at.desc()).all()
-
     stats = {
         "total_users": total_users,
         "verified_users": verified_users,
@@ -429,12 +447,11 @@ def logout():
 
 
 # ---------------------------
-# DB init & normalization
+# DB init & optional normalization helper
 # ---------------------------
 def init_db():
     with app.app_context():
         db.create_all()
-
         if not User.query.filter_by(email="admin@firstaid.com").first():
             admin = User(
                 username="admin",
@@ -450,47 +467,62 @@ def init_db():
                 {
                     "title": "Epileptic Seizure",
                     "category": "Neurological",
-                    "description": "A seizure is a sudden, uncontrolled electrical disturbance in the brain.",
+                    "description": "A seizure is a sudden, uncontrolled electrical disturbance in the brain that can cause changes in behavior, movements, or consciousness.",
                     "steps": [
                         "Stay calm and time the seizure",
-                        "Protect the person from injury",
-                        "Turn them on their side",
-                        "Do NOT restrain them",
-                        "Call emergency services if lasts more than 5 minutes",
+                        "Protect the person from injury - clear the area",
+                        "Turn them on their side to keep airway clear",
+                        "Place something soft under their head",
+                        "Do NOT restrain them or put anything in their mouth",
+                        "Stay with them until they recover",
+                        "Call emergency services if seizure lasts more than 5 minutes",
                     ],
                     "symptoms": [
-                        "Uncontrolled jerking",
-                        "Loss of consciousness",
-                        "Confusion afterward",
+                        "Sudden loss of consciousness",
+                        "Uncontrolled jerking movements",
+                        "Stiffening of body",
+                        "Confusion after episode",
                     ],
                     "warnings": [
                         "Never put anything in their mouth",
                         "Do not hold them down",
+                        "Call 911 if first seizure or lasts over 5 minutes",
                     ],
                     "tips": [
-                        "Time the seizure",
-                        "Stay calm",
+                        "Time the seizure duration",
+                        "Note any unusual symptoms",
+                        "Stay calm to help the person stay calm",
                     ],
                 },
                 {
                     "title": "Choking",
                     "category": "Respiratory",
-                    "description": "Choking occurs when an object blocks the airway.",
+                    "description": "Choking occurs when an object blocks the throat or windpipe, preventing air from reaching the lungs.",
                     "steps": [
-                        "Ask if they are choking",
-                        "Perform Heimlich maneuver",
-                        "Call emergency services if unconscious",
+                        "Ask 'Are you choking?' - If they can cough or speak, encourage coughing",
+                        "If they cannot breathe, perform Heimlich maneuver",
+                        "Stand behind the person and wrap arms around waist",
+                        "Make a fist above the navel",
+                        "Grasp fist with other hand and thrust inward and upward",
+                        "Repeat until object is expelled",
+                        "If person becomes unconscious, call 911 and begin CPR",
                     ],
                     "symptoms": [
-                        "Inability to speak",
-                        "Turning blue",
+                        "Cannot speak or cough",
                         "Clutching throat",
+                        "Turning blue",
+                        "Difficulty breathing",
                     ],
-                    "warnings": ["Do not perform Heimlich on infants"],
-                    "tips": ["Act quickly", "Encourage coughing"],
+                    "warnings": [
+                        "For infants, use back blows and chest thrusts",
+                        "Do not perform Heimlich on infants",
+                    ],
+                    "tips": [
+                        "Encourage strong coughing if possible",
+                        "Stay behind the person for support",
+                    ],
                 },
             ]
-
             for g in guides:
                 guide = EmergencyGuide(
                     title=g["title"],
