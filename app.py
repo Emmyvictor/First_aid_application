@@ -162,30 +162,39 @@ def safe_load_list(json_text):
 # ---------------------------
 def send_verification_email(user):
     """
-    Sends email via Flask-Mail.
-    Running in background thread.
+    Sends verification email safely inside application context.
+    Works with background threads.
     """
+    from flask import current_app
+
     try:
-        token = secrets.token_urlsafe(32)
-        user.verification_token = token
-        db.session.commit()
+        # Create a thread-safe app context
+        with current_app.app_context():
 
-        verification_url = url_for("verify_email", token=token, _external=True)
+            # Generate token and save to DB
+            token = secrets.token_urlsafe(32)
+            user.verification_token = token
+            db.session.commit()
 
-        msg = Message(
-            "Verify Your Email - First Aid Hub",
-            recipients=[user.email],
-        )
-        msg.html = f"""
-            <p>Hello {user.username},</p>
-            <p>Please verify your account:</p>
-            <p><a href="{verification_url}">{verification_url}</a></p>
-            <p>If you didn't register, ignore this email.</p>
-        """
+            verification_url = url_for("verify_email", token=token, _external=True)
 
-        print("📨 Sending email to:", user.email)
-        mail.send(msg)
-        print("✔ Email sent successfully")
+            # Prepare email
+            msg = Message(
+                "Verify Your Email - First Aid Hub",
+                recipients=[user.email],
+            )
+            msg.html = f"""
+                <p>Hello {user.username},</p>
+                <p>Please verify your account:</p>
+                <p><a href="{verification_url}">{verification_url}</a></p>
+                <p>If you didn't register, ignore this email.</p>
+            """
+
+            print("📨 Sending verification email to:", user.email)
+
+            mail.send(msg)
+
+            print("✔ Verification email sent successfully!")
 
     except Exception as e:
         print("✗ Email error:", e)
