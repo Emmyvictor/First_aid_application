@@ -160,47 +160,35 @@ def safe_load_list(json_text):
 # ---------------------------
 # EMAIL SENDER (SMTP)
 # ---------------------------
-def send_verification_email(user):
+def send_verification_email_async(user_email, user_username, verification_url):
     """
-    Sends verification email safely inside application context.
-    Works with background threads.
+    Sends verification email in background thread.
+    All context-dependent data must be passed as parameters.
     """
-    try:
-        # Generate token and verification URL BEFORE threading
-        token = secrets.token_urlsafe(32)
-        user.verification_token = token
-        db.session.commit()
 
-        # Generate URL in main thread (requires app context)
-        verification_url = url_for("verify_email", token=token, _external=True)
+    def send_email():
+        with app.app_context():
+            try:
+                msg = Message(
+                    "Verify Your Email - First Aid Hub",
+                    recipients=[user_email],
+                )
+                msg.html = f"""
+                    <p>Hello {user_username},</p>
+                    <p>Please verify your account:</p>
+                    <p><a href="{verification_url}">{verification_url}</a></p>
+                    <p>If you didn't register, ignore this email.</p>
+                """
 
-        # Now send email in background thread with pre-generated URL
-        def send_email_background():
-            with app.app_context():
-                try:
-                    msg = Message(
-                        "Verify Your Email - First Aid Hub",
-                        recipients=[user.email],
-                    )
-                    msg.html = f"""
-                        <p>Hello {user.username},</p>
-                        <p>Please verify your account:</p>
-                        <p><a href="{verification_url}">{verification_url}</a></p>
-                        <p>If you didn't register, ignore this email.</p>
-                    """
+                print("📨 Sending verification email to:", user_email)
+                mail.send(msg)
+                print("✔ Verification email sent successfully!")
 
-                    print("📨 Sending verification email to:", user.email)
-                    mail.send(msg)
-                    print("✔ Verification email sent successfully!")
+            except Exception as e:
+                print("✗ Email sending error:", e)
 
-                except Exception as e:
-                    print("✗ Email sending error:", e)
-
-        # Start background thread
-        threading.Thread(target=send_email_background).start()
-
-    except Exception as e:
-        print("✗ Email preparation error:", e)
+    # Start background thread
+    threading.Thread(target=send_email).start()
 
 
 def log_activity(user_id, action, details=None):
@@ -250,8 +238,7 @@ def index():
 @app.route("/signup", methods=["GET", "POST"])
 def signup():
     """
-    FIXED: Email sends in background thread.
-    Signup returns instantly.
+    FIXED: Generate token and URL in main thread, then send email in background.
     """
     if request.method == "POST":
         username = request.form.get("username")
@@ -266,16 +253,25 @@ def signup():
             flash("Username taken.", "danger")
             return redirect(url_for("signup"))
 
+        # Create user
         user = User(
             username=username,
             email=email,
             password=generate_password_hash(password),
         )
         db.session.add(user)
+        db.session.flush()  # Get user.id without committing
+
+        # Generate token and URL in main thread (has app context)
+        token = secrets.token_urlsafe(32)
+        user.verification_token = token
         db.session.commit()
 
-        # 🔥 SEND EMAIL NON-BLOCKING
-        threading.Thread(target=send_verification_email, args=(user,)).start()
+        # Generate verification URL (requires app context)
+        verification_url = url_for("verify_email", token=token, _external=True)
+
+        # Send email in background with pre-generated data
+        send_verification_email_async(user.email, user.username, verification_url)
 
         flash("Account created! Check your email for verification.", "success")
         return redirect(url_for("login"))
