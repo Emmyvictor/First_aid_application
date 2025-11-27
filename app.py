@@ -1,7 +1,9 @@
-# app.py — PostgreSQL + SMTP version (full file)
+# app.py — PostgreSQL + SMTP version (FIXED FOR EMAIL THREADING)
+
 import os
 import secrets
 import json
+import threading
 from datetime import datetime
 from functools import wraps
 
@@ -28,14 +30,12 @@ app = Flask(__name__)
 # ---------------------------
 # Config (env-driven; safe fallbacks)
 # ---------------------------
-# Secret key (use env SECRET_KEY in production)
 app.config["SECRET_KEY"] = os.getenv("SECRET_KEY", secrets.token_hex(32))
 
-# Database URL - prefer env but fallback to the provided URL
 _default_db = "postgresql://firstaid_db_user:AqNu3UJbVd8OjLAyOLAaNGLrhcqujlRl@dpg-d4jfiv95pdvs739dp60g-a/firstaid_db"
 database_url = os.getenv("DATABASE_URL", _default_db) or _default_db
 
-# Some platforms still return `postgres://` — SQLAlchemy expects `postgresql://`
+# Fix postgres:// → postgresql:// (Render bug)
 if database_url.startswith("postgres://"):
     database_url = database_url.replace("postgres://", "postgresql://", 1)
 
@@ -43,7 +43,7 @@ app.config["SQLALCHEMY_DATABASE_URI"] = database_url
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
 
-# Mail settings (read from env; keep sensible fallbacks)
+# Email (SMTP)
 def _env_bool(name, default=False):
     v = os.getenv(name)
     if v is None:
@@ -72,24 +72,19 @@ mail = Mail(app)
 # Custom JSON column type
 # ---------------------------
 class JSONEncodedList(TypeDecorator):
-    """Represents an immutable structure as a json-encoded string in the DB."""
-
     impl = Text
 
     def process_bind_param(self, value, dialect):
         if value is None:
             return "[]"
         if isinstance(value, list):
-            try:
-                return json.dumps(value, ensure_ascii=False)
-            except Exception:
-                return json.dumps([str(x) for x in value], ensure_ascii=False)
+            return json.dumps(value, ensure_ascii=False)
         if isinstance(value, str):
             try:
                 parsed = json.loads(value)
                 if isinstance(parsed, list):
                     return value
-            except Exception:
+            except:
                 return json.dumps([value], ensure_ascii=False)
         return json.dumps(value, ensure_ascii=False)
 
@@ -101,7 +96,7 @@ class JSONEncodedList(TypeDecorator):
             if isinstance(parsed, list):
                 return parsed
             return [parsed]
-        except Exception:
+        except:
             return [value]
 
 
@@ -152,26 +147,23 @@ def safe_load_list(json_text):
         return json_text
     if isinstance(json_text, str):
         try:
-            parsed = json.loads(json_text)
-            if isinstance(parsed, list):
-                return parsed
-            return [parsed]
-        except Exception:
+            return json.loads(json_text)
+        except:
             if "\n" in json_text:
                 return [s.strip() for s in json_text.splitlines() if s.strip()]
             if "," in json_text:
                 return [s.strip() for s in json_text.split(",") if s.strip()]
-            return [json_text.strip()] if json_text.strip() else []
-    try:
-        return list(json_text)
-    except Exception:
-        return [str(json_text)]
+            return [json_text.strip()]
+    return [str(json_text)]
 
 
+# ---------------------------
+# EMAIL SENDER (SMTP)
+# ---------------------------
 def send_verification_email(user):
     """
-    Uses Flask-Mail (SMTP) to send verification email.
-    Make sure MAIL_* env variables are set on Render.
+    Sends email via Flask-Mail.
+    Running in background thread.
     """
     try:
         token = secrets.token_urlsafe(32)
@@ -181,29 +173,29 @@ def send_verification_email(user):
         verification_url = url_for("verify_email", token=token, _external=True)
 
         msg = Message(
-            "Welcome to First Aid Hub - Verify Your Email",
+            "Verify Your Email - First Aid Hub",
             recipients=[user.email],
         )
         msg.html = f"""
-        <p>Hello {user.username},</p>
-        <p>Please verify your account by clicking the link below:</p>
-        <p><a href="{verification_url}">{verification_url}</a></p>
-        <p>If you didn't sign up, ignore this email.</p>
+            <p>Hello {user.username},</p>
+            <p>Please verify your account:</p>
+            <p><a href="{verification_url}">{verification_url}</a></p>
+            <p>If you didn't register, ignore this email.</p>
         """
+
+        print("📨 Sending email to:", user.email)
         mail.send(msg)
-        return True
+        print("✔ Email sent successfully")
+
     except Exception as e:
-        # Log the error to console (Render logs)
         print("✗ Email error:", e)
-        return False
 
 
 def log_activity(user_id, action, details=None):
     try:
-        activity = Activity(user_id=user_id, action=action, details=details)
-        db.session.add(activity)
+        db.session.add(Activity(user_id=user_id, action=action, details=details))
         db.session.commit()
-    except Exception:
+    except:
         db.session.rollback()
 
 
@@ -245,6 +237,10 @@ def index():
 
 @app.route("/signup", methods=["GET", "POST"])
 def signup():
+    """
+    FIXED: Email sends in background thread.
+    Signup returns instantly.
+    """
     if request.method == "POST":
         username = request.form.get("username")
         email = request.form.get("email")
@@ -266,9 +262,10 @@ def signup():
         db.session.add(user)
         db.session.commit()
 
-        send_verification_email(user)
+        # 🔥 SEND EMAIL NON-BLOCKING
+        threading.Thread(target=send_verification_email, args=(user,)).start()
 
-        flash("Account created! Verification email sent.", "success")
+        flash("Account created! Check your email for verification.", "success")
         return redirect(url_for("login"))
 
     return render_template("signup.html")
@@ -284,7 +281,7 @@ def login():
 
         if user and check_password_hash(user.password, password):
             if not user.is_verified:
-                flash("Please verify your email first.", "warning")
+                flash("Verify your email first.", "warning")
                 return redirect(url_for("login"))
 
             session["user_id"] = user.id
@@ -305,13 +302,15 @@ def login():
 @app.route("/verify/<token>")
 def verify_email(token):
     user = User.query.filter_by(verification_token=token).first()
-    if user:
-        user.is_verified = True
-        user.verification_token = None
-        db.session.commit()
-        flash("Email verified!", "success")
-    else:
+    if not user:
         flash("Invalid or expired link.", "danger")
+        return redirect(url_for("login"))
+
+    user.is_verified = True
+    user.verification_token = None
+    db.session.commit()
+
+    flash("Email verified!", "success")
     return redirect(url_for("login"))
 
 
@@ -400,7 +399,7 @@ def search():
                 "id": g.id,
                 "title": g.title,
                 "category": g.category,
-                "description": (g.description[:200] + "..."),
+                "description": g.description[:200] + "...",
             }
             for g in results
         ]
@@ -447,21 +446,15 @@ def logout():
 
 
 # ---------------------------
-# DB init & optional normalization helper
+# DB init
 # ---------------------------
 def init_db():
     with app.app_context():
         db.create_all()
-        if not User.query.filter_by(email="admin@firstaid.com").first():
-            admin = User(
-                username="admin",
-                email="admin@firstaid.com",
-                password=generate_password_hash("admin123"),
-                is_verified=True,
-                is_admin=True,
-            )
-            db.session.add(admin)
 
+        # ------------------------------
+        # Add Default Emergency Guides (if DB is empty)
+        # ------------------------------
         if EmergencyGuide.query.count() == 0:
             guides = [
                 {
@@ -499,7 +492,7 @@ def init_db():
                     "category": "Respiratory",
                     "description": "Choking occurs when an object blocks the throat or windpipe, preventing air from reaching the lungs.",
                     "steps": [
-                        "Ask 'Are you choking?' - If they can cough or speak, encourage coughing",
+                        "Ask 'Are you choking?' – If they can cough or speak, encourage coughing",
                         "If they cannot breathe, perform Heimlich maneuver",
                         "Stand behind the person and wrap arms around waist",
                         "Make a fist above the navel",
@@ -523,6 +516,7 @@ def init_db():
                     ],
                 },
             ]
+
             for g in guides:
                 guide = EmergencyGuide(
                     title=g["title"],
@@ -535,8 +529,10 @@ def init_db():
                 )
                 db.session.add(guide)
 
-        db.session.commit()
-        print("Database initialized successfully!")
+            db.session.commit()
+            print("Default Emergency Guides added!")
+
+        print("Database initialized!")
 
 
 def normalize_db():
@@ -564,19 +560,24 @@ def normalize_db():
 
             if changed:
                 db.session.add(g)
+
         if changed:
             db.session.commit()
-        print(f"Normalization complete. Modified {changed} fields across guides.")
 
-
-if __name__ == "__main__":
-    app.run()
+        print("Normalization complete. Updated:", changed)
 
 
 @app.route("/init_db")
 def init_db_route():
     try:
         init_db()
-        return "Database initialized successfully!"
+        return "Database initialized!"
     except Exception as e:
-        return f"Error: {e}"
+        return str(e)
+
+
+# ---------------------------
+# Main
+# ---------------------------
+if __name__ == "__main__":
+    app.run()
