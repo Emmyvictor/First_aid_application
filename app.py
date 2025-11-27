@@ -165,39 +165,42 @@ def send_verification_email(user):
     Sends verification email safely inside application context.
     Works with background threads.
     """
-    from flask import current_app
-
     try:
-        # Create a thread-safe app context
-        with current_app.app_context():
+        # Generate token and verification URL BEFORE threading
+        token = secrets.token_urlsafe(32)
+        user.verification_token = token
+        db.session.commit()
 
-            # Generate token and save to DB
-            token = secrets.token_urlsafe(32)
-            user.verification_token = token
-            db.session.commit()
+        # Generate URL in main thread (requires app context)
+        verification_url = url_for("verify_email", token=token, _external=True)
 
-            verification_url = url_for("verify_email", token=token, _external=True)
+        # Now send email in background thread with pre-generated URL
+        def send_email_background():
+            with app.app_context():
+                try:
+                    msg = Message(
+                        "Verify Your Email - First Aid Hub",
+                        recipients=[user.email],
+                    )
+                    msg.html = f"""
+                        <p>Hello {user.username},</p>
+                        <p>Please verify your account:</p>
+                        <p><a href="{verification_url}">{verification_url}</a></p>
+                        <p>If you didn't register, ignore this email.</p>
+                    """
 
-            # Prepare email
-            msg = Message(
-                "Verify Your Email - First Aid Hub",
-                recipients=[user.email],
-            )
-            msg.html = f"""
-                <p>Hello {user.username},</p>
-                <p>Please verify your account:</p>
-                <p><a href="{verification_url}">{verification_url}</a></p>
-                <p>If you didn't register, ignore this email.</p>
-            """
+                    print("📨 Sending verification email to:", user.email)
+                    mail.send(msg)
+                    print("✔ Verification email sent successfully!")
 
-            print("📨 Sending verification email to:", user.email)
+                except Exception as e:
+                    print("✗ Email sending error:", e)
 
-            mail.send(msg)
-
-            print("✔ Verification email sent successfully!")
+        # Start background thread
+        threading.Thread(target=send_email_background).start()
 
     except Exception as e:
-        print("✗ Email error:", e)
+        print("✗ Email preparation error:", e)
 
 
 def log_activity(user_id, action, details=None):
