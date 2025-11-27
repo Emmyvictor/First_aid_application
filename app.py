@@ -570,5 +570,13 @@ def normalize_db():
 
 
 if __name__ == "__main__":
-    init_db()
-    app.run(debug=True, port=5001)
+    app.run()
+
+
+@app.route("/init_db")
+def init_db_route():
+    try:
+        init_db()
+        return "Database initialized successfully!"
+    except Exception as e:
+        return f"Error: {e}"
