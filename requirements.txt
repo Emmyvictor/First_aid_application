@@ -6,10 +6,9 @@ itsdangerous==2.2.0
 SQLAlchemy==2.0.23
 simplejson==3.19.2
 gunicorn==21.2.0
-greenlet==3.0.3
 
-# Required for PostgreSQL on Render
+# PostgreSQL on Render
 psycopg2-binary==2.9.9
 
-# Email for Gmail SMTP
+# Email (Gmail SMTP)
 Flask-Mail==0.9.1
