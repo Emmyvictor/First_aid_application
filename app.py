@@ -1,4 +1,4 @@
-# app.py — PostgreSQL + SMTP version (FIXED FOR EMAIL THREADING)
+# app.py — PostgreSQL + SMTP + Google OAuth
 
 import os
 import secrets
@@ -22,6 +22,7 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_mail import Mail, Message
 from werkzeug.security import generate_password_hash, check_password_hash
 from sqlalchemy import TypeDecorator, Text
+from authlib.integrations.flask_client import OAuth
 
 load_dotenv()
 
@@ -61,11 +62,25 @@ app.config["MAIL_DEFAULT_SENDER"] = os.getenv(
     "MAIL_DEFAULT_SENDER", app.config["MAIL_USERNAME"]
 )
 
+# Google OAuth Config
+app.config["GOOGLE_CLIENT_ID"] = os.getenv("GOOGLE_CLIENT_ID")
+app.config["GOOGLE_CLIENT_SECRET"] = os.getenv("GOOGLE_CLIENT_SECRET")
+
 # ---------------------------
 # Extensions
 # ---------------------------
 db = SQLAlchemy(app)
 mail = Mail(app)
+
+# OAuth Setup
+oauth = OAuth(app)
+google = oauth.register(
+    name="google",
+    client_id=app.config["GOOGLE_CLIENT_ID"],
+    client_secret=app.config["GOOGLE_CLIENT_SECRET"],
+    server_metadata_url="https://accounts.google.com/.well-known/openid-configuration",
+    client_kwargs={"scope": "openid email profile"},
+)
 
 
 # ---------------------------
@@ -300,11 +315,78 @@ def login():
             db.session.commit()
 
             log_activity(user.id, "login")
-            return redirect(url_for("dashboard"))
+            return redirect(url_for("welcome"))
 
         flash("Invalid credentials.", "danger")
 
     return render_template("login.html")
+
+
+# ---------------------------
+# GOOGLE OAUTH ROUTES
+# ---------------------------
+@app.route("/auth/google")
+def google_login():
+    """Redirect to Google login"""
+    redirect_uri = url_for("google_callback", _external=True)
+    return google.authorize_redirect(redirect_uri)
+
+
+@app.route("/auth/callback")
+def google_callback():
+    """Handle Google callback after login"""
+    try:
+        token = google.authorize_access_token()
+        user_info = token.get("userinfo")
+
+        if not user_info:
+            flash("Failed to get user info from Google", "danger")
+            return redirect(url_for("login"))
+
+        email = user_info["email"]
+        username = user_info.get("name", email.split("@")[0])
+
+        # Check if user exists
+        user = User.query.filter_by(email=email).first()
+
+        if not user:
+            # Create new user (no password needed for OAuth users)
+            user = User(
+                username=username,
+                email=email,
+                password=generate_password_hash(
+                    secrets.token_urlsafe(32)
+                ),  # Random password
+                is_verified=True,  # Google verified the email!
+            )
+            db.session.add(user)
+            db.session.commit()
+
+        # Log them in
+        session["user_id"] = user.id
+        session["username"] = user.username
+        session["is_admin"] = user.is_admin
+
+        user.last_login = datetime.utcnow()
+        db.session.commit()
+
+        log_activity(user.id, "google_login", "Signed in with Google")
+
+        flash(f"Welcome, {user.username}!", "success")
+        return redirect(url_for("welcome"))
+
+    except Exception as e:
+        print(f"Google login error: {e}")
+        flash("Google login failed. Please try again.", "danger")
+        return redirect(url_for("login"))
+
+
+@app.route("/welcome")
+@login_required
+def welcome():
+    """Simple welcome page after login"""
+    user = User.query.get(session["user_id"])
+    return render_template("welcome.html", user=user)
 
 
 @app.route("/verify/<token>")

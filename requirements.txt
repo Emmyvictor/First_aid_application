@@ -12,3 +12,4 @@ psycopg2-binary==2.9.9
 
 # Email (Gmail SMTP)
 Flask-Mail==0.9.1
+authlib==1.3.0
